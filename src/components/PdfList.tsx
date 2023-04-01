@@ -1,4 +1,10 @@
-import React, {useEffect, useState} from 'react'
+import React, {useCallback, useEffect, useState} from 'react'
+import Alert from '@mui/material/Alert'
+import AlertTitle from '@mui/material/AlertTitle'
+import CloseIcon from '@mui/icons-material/Close'
+import IconButton from '@mui/material/IconButton'
+import Collapse from '@mui/material/Collapse'
+import Link from '@mui/material/Link'
 import Paper from '@mui/material/Paper'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
@@ -48,60 +54,95 @@ interface PdfListProps {
   blossom: Blossom
 }
 
+const fetchList = async (blossom: Blossom) => {
+  const pods = await blossom.fdpStorage.personalStorage.list()
+  const files = [] as FileData[]
+
+  for (const pod of pods.pods) {
+    const list = await blossom.fdpStorage.directory.read(pod.name, '/', true)
+
+    list.files.filter(file => {
+      if (!file.raw?.hasOwnProperty('filePath')) {
+        return false
+      }
+
+      const ext = file.name.split('.').pop()
+
+      return ext && ext.toLowerCase() === 'pdf'
+    }).forEach(file => {
+      console.log(file)
+      const data = file.raw as RawFileMetadata
+      files.push({
+        pod: pod.name,
+        path: data.filePath,
+        name: file.name,
+        size: file.size || 0,
+        time: data.creationTime,
+      })
+    })
+  }
+
+  return files
+}
+
 function PdfList({blossom}: PdfListProps) {
   const store = new FilesStore() // TODO: maybe memoize
   const [loading, setLoading] = useState(true)
   const [files, setFiles] = useState<FileData[]>(store.getFiles)
-
-  useEffect(() => {
-    const fetchList = async () => {
-      const pods = await blossom.fdpStorage.personalStorage.list()
-      const files = [] as FileData[]
-
-      for (const pod of pods.pods) {
-        const list = await blossom.fdpStorage.directory.read(pod.name, '/', true)
-
-        list.files.filter(file => {
-          if (!file.raw?.hasOwnProperty('filePath')) {
-            return false
-          }
-
-          const ext = file.name.split('.').pop()
-
-          return ext && ext.toLowerCase() === 'pdf'
-        }).forEach(file => {
-          console.log(file)
-          const data = file.raw as RawFileMetadata
-          files.push({
-            pod: pod.name,
-            path: data.filePath,
-            name: file.name,
-            size: file.size || 0,
-            time: data.creationTime,
-          })
-        })
-      }
-
-      store.setFiles(files)
-      setFiles(files)
-      setLoading(false)
-    }
-
-    setLoading(true)
-    fetchList().then(() => true)
-  }, [blossom])
-
-  const openFile = async (index: number) => {
+  const [alert, setAlert] = useState<string | false>(false)
+  const openFile = useCallback((index: number) => {
     if (files && files[index]) {
       const file = files[index]
 
       // TODO: open PDF in modal
       console.log(file)
     }
-  }
+  }, [files])
+
+  useEffect(() => {
+    if (!loading) {
+      return
+    }
+    fetchList(blossom)
+      .then(files => {
+        store.setFiles(files)
+        setFiles(files)
+      })
+      .catch(reason => {
+        console.error(reason)
+        setAlert(reason.message)
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [blossom, loading])
 
   return (
     <React.Fragment>
+      <Collapse in={alert !== false}>
+        <Alert
+          severity="error"
+          action={
+            <IconButton
+              aria-label="close"
+              color="inherit"
+              size="small"
+              onClick={() => {
+                setAlert(false)
+              }}>
+              <CloseIcon/>
+            </IconButton>
+          }
+          sx={{marginBottom: 1}}
+        >
+          <AlertTitle>Error</AlertTitle>
+          Problem trying to load the list of files on Fairdrive: <strong>{alert}</strong>.&nbsp;
+          <Link onClick={() => {
+            setAlert(false)
+            setLoading(true)
+          }} sx={{cursor: 'pointer'}}>Try again</Link>
+        </Alert>
+      </Collapse>
       {files.length ?
         <Paper sx={{width: '100%', overflow: 'hidden'}}>
           <TableContainer sx={{maxHeight: 440}}>
