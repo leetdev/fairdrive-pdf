@@ -17,9 +17,10 @@ import type {RawFileMetadata} from '@fairdatasociety/fdp-storage/dist/pod/types'
 import FilesStore from '../store/FilesStore'
 import Loading from './Loading'
 import type {FileData} from '../types'
+import PdfViewer from './PdfViewer'
 
 function humanFileSize(size: number) {
-  const i = size == 0 ? 0 : Math.floor(Math.log(size) / Math.log(1024))
+  const i = size === 0 ? 0 : Math.floor(Math.log(size) / Math.log(1024))
   return Number((size / Math.pow(1024, i)).toFixed(2)) + ' ' + ['B', 'kB', 'MB', 'GB', 'TB'][i]
 }
 
@@ -54,7 +55,7 @@ interface PdfListProps {
   blossom: Blossom
 }
 
-const fetchList = async (blossom: Blossom) => {
+const fetchList = async (blossom: Blossom): Promise<FileData[]> => {
   const pods = await blossom.fdpStorage.personalStorage.list()
   const files = [] as FileData[]
 
@@ -90,12 +91,12 @@ function PdfList({blossom}: PdfListProps) {
   const [loading, setLoading] = useState(true)
   const [files, setFiles] = useState<FileData[]>(store.getFiles)
   const [alert, setAlert] = useState<string | false>(false)
+  const [open, setOpen] = useState(false)
+  const [file, setFile] = useState<FileData>()
   const openFile = useCallback((index: number) => {
     if (files && files[index]) {
-      const file = files[index]
-
-      // TODO: open PDF in modal
-      console.log(file)
+      setOpen(true)
+      setFile(files[index])
     }
   }, [files])
 
@@ -108,9 +109,9 @@ function PdfList({blossom}: PdfListProps) {
         store.setFiles(files)
         setFiles(files)
       })
-      .catch(reason => {
-        console.error(reason)
-        setAlert(reason.message)
+      .catch(error => {
+        console.error(error)
+        setAlert(error.message)
       })
       .finally(() => {
         setLoading(false)
@@ -136,7 +137,7 @@ function PdfList({blossom}: PdfListProps) {
           sx={{marginBottom: 1}}
         >
           <AlertTitle>Error</AlertTitle>
-          Problem trying to load the list of files on Fairdrive: <strong>{alert}</strong>.&nbsp;
+          Problem trying to load the list of files from Fairdrive: <strong>{alert}</strong>.&nbsp;
           <Link onClick={() => {
             setAlert(false)
             setLoading(true)
@@ -192,6 +193,14 @@ function PdfList({blossom}: PdfListProps) {
         : (loading ? '' : 'No PDF files found.')
       }
       <Loading loading={loading}/>
+      <PdfViewer
+        blossom={blossom}
+        pod={file?.pod}
+        path={file?.path}
+        filename={file?.name}
+        open={open}
+        onClose={() => setOpen(false)}
+      />
     </React.Fragment>
   )
 }
