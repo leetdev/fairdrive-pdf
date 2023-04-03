@@ -6,7 +6,9 @@ import Container from '@mui/material/Container'
 import useBlossom from '../hooks/useBlossom'
 import Header from './Header'
 import Loading from './Loading'
+import GrantPermissionsModal from './modals/GrantPermissionsModal'
 import InstallBlossomModal from './modals/InstallBlossomModal'
+import LoginBlossomModal from './modals/LoginBlossomModal'
 import PdfList from './PdfList'
 
 import '@fontsource/roboto/300.css'
@@ -21,14 +23,19 @@ const theme = createTheme({
 })
 
 function App() {
-  const {blossom, connected} = useBlossom()
+  const {blossom, connecting, connected} = useBlossom()
   const [granted, setGranted] = useState(false)
+  const [loginError, setLoginError] = useState(false)
+
+  const reload = () => window.location.reload()
 
   useEffect(() => {
     if (connected) {
-      blossom.fdpStorage.personalStorage.requestFullAccess().then(() => setGranted(true)).catch(reason => {
-        // TODO: handle
+      blossom.fdpStorage.personalStorage.requestFullAccess().then(setGranted).catch(reason => {
         console.log('Blossom error: ' + reason)
+        if (reason === 'Error: User is not logged in') {
+          setLoginError(true)
+        }
       })
     } else {
 
@@ -50,7 +57,9 @@ function App() {
                 <PdfList blossom={blossom}/>
               )
             }
-            <InstallBlossomModal isOpen={!connected} onClose={() => window.location.reload()}/>
+            <InstallBlossomModal isOpen={!connecting && !connected} onClose={reload}/>
+            <LoginBlossomModal isOpen={loginError} onClose={reload}/>
+            <GrantPermissionsModal isOpen={connected && !granted} onClose={reload}/>
           </Container>
         </Box>
       </Box>

@@ -1,3 +1,5 @@
+import {ReactNode} from 'react'
+
 export interface FileData {
   pod: string
   path: string
@@ -9,4 +11,9 @@ export interface FileData {
 export interface ModalProps {
   isOpen: boolean
   onClose: () => void
+}
+
+export interface SimpleModalProps extends ModalProps {
+  title: string
+  children: ReactNode
 }
