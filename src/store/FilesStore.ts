@@ -2,12 +2,20 @@ import type {FileData} from '../types'
 
 export default class FilesStore {
   getFiles(): FileData[] {
-    const filesString = localStorage.getItem('files')
+    try {
+      const filesString = localStorage.getItem('fairdrivePdfFiles')
 
-    return filesString ? JSON.parse(filesString) : []
+      return filesString ? JSON.parse(filesString) : []
+    } catch (_e) {
+      return []
+    }
   }
 
   setFiles(files: FileData[]) {
-    localStorage.setItem('files', JSON.stringify(files))
+    try {
+      localStorage.setItem('fairdrivePdfFiles', JSON.stringify(files))
+    } catch (e) {
+      console.log(e)
+    }
   }
 }

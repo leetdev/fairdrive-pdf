@@ -42,7 +42,6 @@ function App() {
     }
   }, [connected, blossom])
 
-  // TODO: add access request & fdp login modals
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline/>
