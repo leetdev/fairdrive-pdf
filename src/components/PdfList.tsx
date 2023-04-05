@@ -47,7 +47,7 @@ const columns: readonly Column[] = [
     label: 'Created',
     minWidth: 100,
     align: 'right',
-    format: (time: number) => new Date(time).toLocaleString('en-GB'),
+    format: (time: number) => new Date(time * 1000).toLocaleString('en-GB'),
   },
 ]
 

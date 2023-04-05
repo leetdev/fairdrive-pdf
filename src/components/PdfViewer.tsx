@@ -25,10 +25,6 @@ interface PdfViewerModalProps {
   onClose: () => void
 }
 
-const fetchFile = async (blossom: Blossom, pod: string, path: string): Promise<Uint8Array> => {
-  return await blossom.fdpStorage.file.downloadData(pod, path)
-}
-
 const Transition = React.forwardRef(function Transition(
   props: TransitionProps & {
     children: React.ReactElement;
@@ -39,20 +35,18 @@ const Transition = React.forwardRef(function Transition(
 })
 
 function PdfViewer({blossom, pod, path, filename, open, onClose}: PdfViewerModalProps) {
-  const [contents, setContents] = useState<Uint8Array | null>()
+  const [contents, setContents] = useState<Blob | null>(null)
   const [pageNumbers, setPageNumbers] = useState<number[]>([])
 
   useEffect(() => {
-    // sanity check
     if (!pod || !path || !filename) {
       return
     }
 
     setContents(null)
-    fetchFile(blossom, pod, path + filename)
-      .then(pdf => {
-        setContents(pdf)
-      })
+    blossom.fdpStorage.file.downloadData(pod, path + filename)
+      .then(data => new Blob([data]))
+      .then(setContents)
       .catch(console.error)
   }, [blossom, pod, path, filename])
 
@@ -81,7 +75,7 @@ function PdfViewer({blossom, pod, path, filename, open, onClose}: PdfViewerModal
       <Box sx={{minHeight: 64}}/>
       {contents !== null ? (
         <Document
-          file={contents?.buffer}
+          file={contents}
           onLoadError={console.error}
           onLoadSuccess={({numPages}) => {
             const pages = []
